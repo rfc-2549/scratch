@@ -1,0 +1,80 @@
+#!/usr/bin/perl
+use strict;
+use English;
+use Hash::Util qw(lock_hash);
+
+use v5.32;
+use feature 'signatures';
+use feature 'say';
+my @options = qw(disable enable stop restart start status);
+
+# disables a service by removing it from the runit
+# directory.
+
+sub disable_service($sv) {
+	return unlink("/var/service/$sv");
+}
+
+# Creates a symlink from the /etc/sv directory to /var/service
+sub enable_service($sv) {
+	return symlink("/etc/sv/$sv", "/var/service/$sv");
+}
+
+# Starts a service.
+sub start_service($sv) {
+	return exec("/bin/sv", "up", $sv);
+}
+# Stops a service
+sub stop_service($sv) {
+	return exec("/bin/sv", "down", $sv);
+}
+
+sub check_service($sv) {
+	return exec("/bin/sv", "status", $sv);
+}
+
+sub restart_service($sv) {
+	return exec("/bin/sv", "restart", $sv);
+
+}
+
+my %command_table = (
+				 disable => \&disable_service,
+				 enable  => \&enable_service,
+				 start   => \&start_service,
+				 stop    => \&stop_service,
+				 status  => \&check_service,
+				 restart => \&restart_service
+				);
+# Lock hash so the table can't be edited at runtime.
+
+lock_hash(%command_table);
+
+my $command = $ARGV[0];
+my $sv      = $ARGV[1];
+
+if (scalar(@ARGV) != 2) {
+	say "usage: rnt command service";
+	say "commands: @options";
+	exit;
+}
+
+unless (exists $command_table{$command}) {
+	say "Unrecognized command: $command";
+	exit;
+}
+
+if ($UID != 0) {
+	say "rerun as root";
+	exit;
+}
+
+
+unless (stat("/etc/sv/$sv")) {
+	say "Unrecognized service: $sv";
+	die $!;
+}
+
+if ($command_table{$command}->($sv) == 0) {
+	say $!;
+}

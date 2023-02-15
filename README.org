@@ -1,0 +1,4 @@
+* Scratchpad
+This repo is just a collection of files I have written in code, not a
+real project. Each file does something different and have nothing to
+do with each others.
