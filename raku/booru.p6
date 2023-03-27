@@ -10,6 +10,7 @@ class X::Gelbooru::NotSuccess is Exception {
 class Gelbooru {
 	use HTTP::Tiny;
 	use JSON::Tiny;
+	use Terminal::ANSIColor;
 	
 	has $.http_client;
 
@@ -18,18 +19,22 @@ class Gelbooru {
 		self.bless(http_client => $http);
 	}
 	
-	method get_posts(@tags where @tags.all ~~ Str:D, Bool:D $safe, Int:D :$limit = 20, Int:D :$page = 0) {
+	method get_posts(@tags where @tags.all ~~ Str:D, Bool:D $safe, Int:D :$limit is copy = 20, Int:D :$page = 0) {
 		my $tags_str = @tags.join("+"); # Gelbooru separates tags
 		# with a '+' because the guy
 		# who runs it is retarded
 
-		my $res = self.http_client.get("https://gelbooru.com/index.php?page=dapi&pid=$page&s=post&q=index&tags=" ~ $tags_str ~ "&json=1");
+		my $res = self.http_client.get("https://gelbooru.com/index.php?page=dapi&pid=$page&s=post&q=index&tags=" ~ $tags_str ~ "&json=1&limit=$limit");
 
 		# Throw exception if the request was not successful.
 		unless $res<status> == 200 {
 			X::Gelbooru::NotSuccess.new.throw;
 		}
 		my $json = from-json($res<content>.decode);
+		if $json<@attributes><count> < $limit {
+			say colored("The limit is greater than the count of posts with the given tags, changing limit", "underline red");
+			$limit := $json<@attributes><count>;
+		}
 		my @urls;
 		
 		for 0..$limit -> $i {
@@ -49,9 +54,7 @@ sub MAIN(Bool :$s = False, #= Only prompt safe posts.
 				Int :$page = 0, #= Page to get
 				*@tags #= Tags. I don't think I have to explain this.
 	   ) {
-	my Gelbooru $booru = Gelbooru.new;
 	for $booru.get_posts(@tags, $s, limit => $limit, page => $page) -> $i {
-		say $i;
+	 	say $i;
 	}
-
 }
