@@ -52,7 +52,7 @@ class Gelbooru {
 sub MAIN(Bool :$s = False, #= Only prompt safe posts.
 				Int :$limit = 20, #= How many posts to get
 				Int :$page = 0, #= Page to get
-				*@tags #= Tags. I don't think I have to explain this.
+				*@tags #= Tags. Kill yourself
 	   ) {
 	for $booru.get_posts(@tags, $s, limit => $limit, page => $page) -> $i {
 	 	say $i;
